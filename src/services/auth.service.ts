@@ -54,9 +54,7 @@ const buildUserQuery = (number?: string, gmail?: string) => {
   return null;
 };
 
-/**
- * Registers a new user and triggers verification OTP.
- */
+// Registers a new user and triggers verification OTP.
 export const registerUserService = async (
   input: RegisterUserInput
 ): Promise<RegisterResult> => {
@@ -108,10 +106,8 @@ export const registerUserService = async (
   };
 };
 
-/**
- * Sends or resends verification OTP to an existing user.
- * Enforces a 60-second cooldown window to prevent abuse.
- */
+// Sends or resends verification OTP to an existing user.
+// Enforces a 60-second cooldown window to prevent abuse.
 export const sendOtpService = async (
   input: SendOtpInput
 ): Promise<DispatchOtpResult> => {
@@ -155,10 +151,10 @@ export const sendOtpService = async (
   return dispatchResult;
 };
 
-/**
- * Verifies the OTP provided by the user.
- * Implements constant-time comparison and brute-force attempt limits (max 5 attempts).
- */
+
+//Verifies the OTP provided by the user.
+ //Implements constant-time comparison and brute-force attempt limits (max 5 attempts).
+
 export const verifyOtpService = async (
   input: VerifyOtpInput
 ): Promise<VerifyOtpResult> => {
@@ -235,10 +231,8 @@ export const verifyOtpService = async (
   };
 };
 
-/**
- * Logs in a user using mobile number or email + password.
- * Checks credential validity, account verification status, and returns session tokens.
- */
+// Logs in a user using mobile number or email + password.
+// Checks credential validity, account verification status, and returns session tokens.
 export const loginUserService = async (
   input: LoginUserInput
 ): Promise<LoginResult> => {
@@ -280,9 +274,9 @@ export const loginUserService = async (
   };
 };
 
-/**
- * Validates a refresh token and generates fresh access & refresh tokens.
- */
+
+//Validates a refresh token and generates fresh access & refresh tokens.
+
 export const refreshTokenService = async (
   token: string
 ): Promise<{ user: IUser; tokens: AuthTokens }> => {
@@ -314,4 +308,17 @@ export const refreshTokenService = async (
     user,
     tokens,
   };
+};
+
+
+//Fetches the authenticated user profile by their ID.
+export const getCurrentUserService = async (userId: string): Promise<IUser> => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new AppError("User account not found", HTTP_STATUS.NOT_FOUND);
+  }
+
+  return user;
+  
 };

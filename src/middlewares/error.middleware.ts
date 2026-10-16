@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/app-error.js";
 import { logger } from "../utils/logger.js";
-import { env } from "../config/env.js";
+
 
 interface MongoDuplicateKeyError extends Error {
   code?: number;
@@ -33,6 +33,9 @@ export const errorHandler = (
   logger.error(err, "Unhandled error occurred");
   return res.status(500).json({
     success: false,
-    message: env.NODE_ENV === "development" ? err.message : "Internal server error",
+    message: err.message
   });
 };
+
+
+

@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import { env } from "./config/env.js";
 import authRouter from "./routes/auth.routes.js";
+import bookRouter from "./routes/book.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { notFoundHandler } from "./middlewares/not-found.middleware.js";
 import { apiResponse } from "./utils/api-response.js";
@@ -24,6 +25,9 @@ app.get("/health", (_req, res) => {
 
 // Authentication & User routes
 app.use("/api/v1/auth", authRouter);
+
+// Book routes
+app.use("/api/v1/books", bookRouter);
 
 // 404 Handler for unmatched routes
 app.use(notFoundHandler);

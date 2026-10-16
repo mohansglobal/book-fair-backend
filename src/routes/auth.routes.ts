@@ -6,8 +6,10 @@ import {
   loginUserController,
   refreshTokenController,
   logoutUserController,
+  getCurrentUserController,
 } from "../controllers/auth.controller.js";
 import { validateRequest } from "../middlewares/validate.middleware.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 import {
   registerUserSchema,
   sendOtpSchema,
@@ -16,6 +18,9 @@ import {
 } from "../validation/auth.validation.js";
 
 const router = Router();
+
+// Current User Details
+router.get("/me", requireAuth, getCurrentUserController);
 
 // Registration
 router.post(
@@ -57,7 +62,7 @@ router.post(
   loginUserController
 );
 
-// Refresh Token`
+// Refresh Token
 router.post("/refresh", refreshTokenController);
 
 // Logout

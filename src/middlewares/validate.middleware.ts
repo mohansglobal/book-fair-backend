@@ -16,10 +16,22 @@ export const validateRequest = (validators: RequestValidators) => {
         req.body = (await validators.body.parseAsync(req.body)) as unknown;
       }
       if (validators.query) {
-        req.query = (await validators.query.parseAsync(req.query)) as Request["query"];
+        const parsedQuery = await validators.query.parseAsync(req.query);
+        Object.defineProperty(req, "query", {
+          value: parsedQuery,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
       }
       if (validators.params) {
-        req.params = (await validators.params.parseAsync(req.params)) as Request["params"];
+        const parsedParams = await validators.params.parseAsync(req.params);
+        Object.defineProperty(req, "params", {
+          value: parsedParams,
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        });
       }
       next();
     } catch (error) {

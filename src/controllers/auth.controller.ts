@@ -5,6 +5,7 @@ import {
   verifyOtpService,
   loginUserService,
   refreshTokenService,
+  getCurrentUserService,
 } from "../services/auth.service.js";
 import {
   RegisterUserInput,
@@ -62,6 +63,47 @@ export const sendOtpController = async (
   });
 };
 
+const ACCESS_TOKEN_COOKIE_MAX_AGE = 15 * 60 * 1000; // 15 minutes
+const REFRESH_TOKEN_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+
+
+/**
+ * Attaches both access token and refresh token as secure HTTP-only cookies.
+ */
+const setAuthCookies = (
+  res: Response,
+  tokens: { accessToken: string; refreshToken: string }
+): void => {
+  res.cookie("accessToken", tokens.accessToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: ACCESS_TOKEN_COOKIE_MAX_AGE,
+  });
+
+  res.cookie("refreshToken", tokens.refreshToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: REFRESH_TOKEN_COOKIE_MAX_AGE,
+  });
+};
+
+/**
+ * Clears both access token and refresh token cookies upon logout.
+ */
+const clearAuthCookies = (res: Response): void => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+};
+
 /**
  * Controller to verify OTP and return authenticated session tokens.
  */
@@ -72,13 +114,8 @@ export const verifyOtpController = async (
   const input: VerifyOtpInput = req.body;
   const { user, tokens } = await verifyOtpService(input);
 
-  // Set secure HTTP-only refresh token cookie
-  res.cookie("refreshToken", tokens.refreshToken, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  // Set secure HTTP-only cookies for both tokens
+  setAuthCookies(res, tokens);
 
   apiResponse(res, HTTP_STATUS.OK, "OTP verified successfully", {
     user: {
@@ -105,13 +142,8 @@ export const loginUserController = async (
   const input: LoginUserInput = req.body; 
   const { user, tokens } = await loginUserService(input);
   
-  // Set secure HTTP-only refresh token cookie
-  res.cookie("refreshToken", tokens.refreshToken, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  // Set secure HTTP-only cookies for both tokens
+  setAuthCookies(res, tokens);
 
   apiResponse(res, HTTP_STATUS.OK, "Login successful", {
     user: {
@@ -135,10 +167,7 @@ export const refreshTokenController = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const token =
-    (req.cookies?.refreshToken as string | undefined) ||
-    (req.body?.refreshToken as string | undefined) ||
-    (req.headers["x-refresh-token"] as string | undefined);
+  const token = req.cookies?.refreshToken as string | undefined;
 
   if (!token) {
     throw new AppError("Refresh token is required", HTTP_STATUS.UNAUTHORIZED);
@@ -146,13 +175,8 @@ export const refreshTokenController = async (
 
   const { user, tokens } = await refreshTokenService(token);
 
-  // Rotate HTTP-only refresh token cookie
-  res.cookie("refreshToken", tokens.refreshToken, {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+  // Rotate secure HTTP-only cookies for both tokens
+  setAuthCookies(res, tokens);
 
   apiResponse(res, HTTP_STATUS.OK, "Token refreshed successfully", {
     user: {
@@ -170,17 +194,43 @@ export const refreshTokenController = async (
 };
 
 /**
- * Controller to log out user and clear the refresh token cookie.
+ * Controller to log out user and clear both auth token cookies.
  */
 export const logoutUserController = async (
   _req: Request,
   res: Response
 ): Promise<void> => {
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
+  clearAuthCookies(res);
   
   apiResponse(res, HTTP_STATUS.OK, "Logged out successfully", null);
+};
+
+/**
+ * Controller to fetch the currently authenticated user's profile.
+ */
+export const getCurrentUserController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    throw new AppError("Authentication required", HTTP_STATUS.UNAUTHORIZED);
+  }
+
+  const user = await getCurrentUserService(userId);
+
+  apiResponse(res, HTTP_STATUS.OK, "User profile retrieved successfully", {
+    user: {
+      id: user._id,
+      name: user.name,
+      number: user.number,
+      gmail: user.gmail ?? null,
+      isVerified: user.isVerified,
+      isEmailVerified: user.isEmailVerified,
+      isMobileVerified: user.isMobileVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    },
+  });
 };
